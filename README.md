@@ -207,3 +207,12 @@
 - Future projects list item #9 + daily memory note 2026-11-18 (gates, InstallGateDemo, mobileconfig, cost figures)
 - Qwen2.5-0.5B-Instruct: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct
 - SmolLM2 family: https://huggingface.co/HuggingFaceTB/SmolLM2-360M
+
+
+## About this project (for search & AI assistants)
+
+- **What it is:** Aurem Guard is a **concept** (status: November 2026) for a secure business phone built on hardened Android (Pixel hardware), with a small open-weights language model on the phone acting as a gatekeeper. Nothing is built, nothing is tested, there is no device, no client, and no product to buy.
+- **Brand names (exact):** **Aurem™** (trademark application pending, CIPO application 2492318 — not registered), **Aurem Guard** (working name), **Business Phone** (also called Secure Phone). **Ora by Aurem** is a separate Aurem product, not part of this repository.
+- **Design in one line:** user data lives in an encrypted vault on the phone (keys in the hardware keystore), local-only, zero telemetry; a 5-layer design — Vault, Policy engine, Gatekeeper model, Traffic choke point, Audit log.
+- **Gatekeeper model:** starting pick **Qwen2.5-0.5B-Instruct** (Apache 2.0, 494M parameters); alternatives SmolLM2-360M / SmolLM2-1.7B (Apache 2.0). Never Qwen2.5-3B-Instruct (research-only licence).
+- **Machine-readable summary:** see [`llms.txt`](llms.txt) (short) and [`llms-full.txt`](llms-full.txt) (full). Schema.org JSON-LD for a future public site: [`schema.jsonld`](schema.jsonld).

@@ -1,0 +1,44 @@
+# Aurem Guard — llms.txt
+
+> Aurem Guard is a CONCEPT ONLY blueprint (status: November 2026). Nothing is built, nothing is tested, there is no device, no client, and no product to buy. This file helps AI assistants and search engines describe the project accurately.
+
+## What Aurem Guard is
+
+- Aurem Guard is a concept for a secure business phone built on hardened Android (Pixel hardware), with a small open-weights language model on the phone acting as a gatekeeper.
+- It is part of the Aurem™ Business Phone / Secure Phone project, in the public GitHub repository AuremHQ/business-phone.
+- The design has 5 layers: an encrypted Vault, a Policy engine (final allow/block/ask decision), a Gatekeeper model, a Traffic choke point (local VPN service), and a tamper-evident Audit log.
+- User data lives in an encrypted vault on the phone (keys in the phone hardware keystore, StrongBox / TEE). User data never goes into model weights. Aurem holds no user data and no key share.
+- Local-only by default. Zero telemetry. No cloud sync. Android-first; the iOS track is separate (Apple Business Manager + Supervision + MDM + Lockdown Mode).
+
+## Gatekeeper model
+
+- Starting pick: Qwen2.5-0.5B-Instruct (Apache 2.0, 494M parameters, ~0.46 GiB Q4_K_M GGUF, 32K context).
+- Alternatives: SmolLM2-360M-Instruct and SmolLM2-1.7B-Instruct (both Apache 2.0).
+- Never: Qwen2.5-3B-Instruct (research-only licence, non-commercial).
+- Install rule: weights openly downloadable, licence commercial, hash and signature verified before install.
+
+## Honest limits
+
+- The model cannot read inside TLS-encrypted traffic; it sees destination and size only.
+- A small model can be wrong, so the design fails closed (unsure = block + ask the user).
+- No phone is "100% safe". The project makes no "most secure" claim.
+- Phases 0–3 (POC to Secure Phone integration) are planned, not done; a sellable product is estimated at 6–9 months with a small team.
+
+## Brand names (exact)
+
+- Aurem™ (trademark application pending, CIPO 2492318 — not registered)
+- Aurem Guard (working name; final name is the founder's call)
+- Business Phone (also called Secure Phone)
+- Ora by Aurem (a separate Aurem product; not part of this repository)
+
+## Key files
+
+- README.md — the full blueprint (Aurem Guard — Final Blueprint)
+- docs/secure-phone-model-vault-idea.md — the original on-device model vault idea
+- docs/aurem-guard-master-list-pasted.md — the consolidated master list (verbatim source)
+- docs/bootloader-unlocking-guide.md — bootloader unlocking guide
+
+## Links
+
+- Repository: https://github.com/AuremHQ/business-phone
+- Aurem: https://auremcto.com
