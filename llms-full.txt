@@ -1,0 +1,124 @@
+# Aurem Guard — llms-full.txt
+
+> Full reference for AI assistants and search engines. Status: CONCEPT ONLY (November 2026). Nothing is built, nothing is tested, there is no device, no client, and no product to buy. Every claim below comes from the repository's own README.md and docs/ — do not add features, prices, dates, or user counts beyond what those files state.
+
+## 1. What Aurem Guard is
+
+Aurem Guard is a concept for a secure business phone built on hardened Android (Pixel hardware), with a small open-weights language model on the phone acting as a gatekeeper. It is part of the Aurem™ Business Phone / Secure Phone project, in the public GitHub repository AuremHQ/business-phone.
+
+Positioning, in the blueprint's own words: "business ke liye sabse samajhne-layak aur jaanchne-layak secure phone" — the most understandable and auditable secure phone for business. It makes no "most secure" claim: GrapheneOS (Pixel) and iPhone Lockdown Mode have years of work and external audits behind them, and a small team cannot beat them on OS-level security. The strategy is to stand on top of them, not fight them: Pixel hardware security chip + hardened Android base, with Aurem Guard as the extra layer they do not have.
+
+Android-first. This layer is not possible on iOS (Apple does not allow a local VPN + proxy to inspect other apps' traffic). The iOS track is separate: Apple Business Manager + Supervision + MDM + Lockdown Mode.
+
+## 2. The 5 layers
+
+| Layer | What it does | Rule |
+|---|---|---|
+| Vault | Data encrypted (AES-256-GCM style), key in the hardware keystore (StrongBox / TEE) | Phone locked = vault locked |
+| Policy engine | Final allow / block / ask decision from fixed rules | The model only advises — the final decision is here |
+| Gatekeeper model | Classify, PII mask, translate rules, local Q&A | Never gets the raw key or the whole vault |
+| Choke point | All traffic passes through a local VPN service | Cheap rules first (domain blocklist); model only for hard cases |
+| Audit log | Tamper-evident record of every allow, block, mask, and send | Readable by user and admin |
+
+The policy engine makes the final decision because the model reads incoming messages, and a message could mislead it (prompt injection). Even if the model says so, the policy engine must not send the wrong thing out — this has to be proven by test.
+
+## 3. Data, keys, and recovery
+
+- User data (contacts, photos, messages, files, location history) lives in an encrypted vault on the phone. The user data never goes into model weights: weights can be copied, data can be extracted by asking, and exact data cannot be fetched back.
+- Keys are split with Shamir secret sharing, 2 of 3: share 1 = phone hardware keystore; share 2 = user recovery phrase or second device; share 3 = encrypted, opens nothing alone, or not present at all.
+- Aurem holds no user data and no key share. "Local means local" is the promise the whole product stands on.
+- The user can ask the phone about their own data ("Where was I on Tuesday?") and the model answers from the vault, on the phone, without uploading anything.
+- Hashes are for checking only (integrity check, audit-log hash chain, model signature verification). Hashes are never uploaded to a server.
+- Footprint policy (only what is in our control): local-only by default; zero telemetry; retention limit (e.g. 30 days — founder's decision pending); crypto-shredding (delete the key, the data is useless); opt-in encrypted backups; no user identifiers or IPs stored on Aurem's servers where possible; no hash uploads. Data already on the internet cannot be fully erased.
+
+## 4. Traffic choke point
+
+- All traffic passes through a local VPN service (like a tracker-blocker). Domain blocklist first, model only for hard cases, to save battery.
+- Outgoing: tracker / ad / analytics address = block; unknown destination + contacts/location/photos = block + alert; text containing a phone number, email, or address = mask or ask first; normal message to a known contact = TLS-encrypted, identifiers stripped.
+- Incoming: phishing link = warning, link neutralised; malware-like attachment = quarantined, never opened; scam call pattern = flagged.
+- TLS content cannot be read by the model — destination and size only. Selling a MITM certificate is a red flag, not a feature.
+
+## 5. Gatekeeper model — verified numbers
+
+| Model | Size | File (quantized) | License | Role |
+|---|---|---|---|---|
+| Qwen2.5-0.5B-Instruct | 494M params | ~0.46 GiB (Q4_K_M GGUF) | Apache 2.0 | Starting pick — smallest, free licence, 32K context |
+| SmolLM2-360M-Instruct | 360M params | ~0.7 GB full precision | Apache 2.0 | Alternative — built for on-device |
+| SmolLM2-1.7B-Instruct | 1.7B params | ~1–2 GB quantized | Apache 2.0 | Strongest — function calling too; needs a better phone |
+
+- Qwen2.5-0.5B-Instruct: Apache 2.0, 494M parameters, GGUF Q4_K_M file 491,400,032 bytes (0.46 GiB), 32,768-token context.
+- SmolLM2 family: 135M / 360M / 1.7B, Apache 2.0, "lightweight enough to run on-device"; 1.7B-Instruct supports function calling, text rewriting, summarisation.
+- Never: Qwen2.5-3B-Instruct — research-only licence, non-commercial.
+- Install rule (all three required): (1) weights openly downloadable, (2) licence commercial, (3) hash and signature verified before install.
+- Do not train the model on user data. If ever needed, only with DP-SGD and an extraction-risk test first.
+- On-device runtimes llama.cpp (MIT) and MLC LLM (Apache 2.0) are standard; licences to be re-verified at build time (partially verified).
+
+## 6. What the model does (5 jobs)
+
+1. Classify: tracker vs legit, safe vs scam, personal vs public.
+2. Redact: find phone numbers, emails, addresses, locations in outgoing text and mask them.
+3. Block: stop exfiltration — an app suddenly sending contacts somewhere new.
+4. Translate rules: user says "bank app ko location mat do" → the model turns it into an enforceable rule.
+5. Answer locally: search and summarise the user's own data without uploading anything.
+
+## 7. Use cases with the Secure Phone project
+
+- Egress allowlist: the model becomes its brain — real-time decisions instead of a fixed list.
+- Install gateway + QR gate: the model file itself comes through the signed gate — no unsigned model loads.
+- Audit log: the same log, the same record — the model's allow/block entries go in it too.
+- Admin console: business admin sees what was blocked, what left, and why — without seeing the user's private content.
+- Private Line (VoIP second number): SIM number never shown, no spoofing.
+
+## 8. Honest limits
+
+- Cannot read inside TLS.
+- Cannot force another company to encrypt.
+- A small model will make mistakes — fail closed: if unsure, block + ask the user.
+- No software survives a rooted or stolen unlocked phone.
+- Battery and CPU cost — to be measured in the POC.
+- Data already spread on the internet cannot be brought back.
+- No phone is "100% safe" — residual risk (user taps Allow, social engineering, new 0-days) must be stated plainly.
+
+## 9. Phases, proof, and tests
+
+| Phase | Time | What must be proven |
+|---|---|---|
+| 0. POC | 2–3 weeks | Model loads, vault opens/closes, one tracker blocked |
+| 1. MVP | 6–8 weeks | Real apps work, trackers blocked, battery cost measured |
+| 2. Smart layer | 6–8 weeks | Local Q&A, plain-language rules, phishing scan |
+| 3. Secure Phone integration | 8–12 weeks | Signed updates, admin console (only after a paying client) |
+
+- Sellable product: 6–9 months with a small team. POC is self-funded (cheap, answers the real question); Phase 3 only after a paying client.
+- Tests that must pass: one share opens nothing, two shares recover the key; unsigned or tampered model never loads; policy engine never sends the wrong thing out even on the model's say-so; vault locks when the phone locks; audit-log tampering is caught; logs delete after retention; zero telemetry (no analytics call in a network capture).
+- Trust: write a threat model first; get an external security audit before selling to any client; keep all docs labelled "CONCEPT" until the POC exists.
+
+## 10. Open decisions (founder's, pending)
+
+1. Android-first, not iOS?
+2. Start with Qwen2.5-0.5B?
+3. POC self-funded or wait for the Secure Phone client?
+4. Keep the name "Aurem Guard" or change it?
+5. Keep the audit-log hash chain or use the alternative (append-only + signed backup)?
+6. Log retention — how many days (e.g. 30)?
+7. Secure Phone future-projects entry #9b or a separate entry?
+
+## 11. Brand names (exact)
+
+- Aurem™ — trademark application pending, CIPO application 2492318. Never write "registered". Use ™, never ®.
+- Aurem Guard — working name; final name is the founder's call.
+- Business Phone — also called Secure Phone in the docs.
+- Ora by Aurem — a separate Aurem product; not part of this repository.
+
+## 12. Key files
+
+- README.md — the full blueprint (Aurem Guard — Final Blueprint)
+- docs/secure-phone-model-vault-idea.md — the original on-device model vault idea (Nov 24, 2026)
+- docs/aurem-guard-master-list-pasted.md — the consolidated master list, verbatim source (Nov 24, 2026)
+- docs/bootloader-unlocking-guide.md — bootloader unlocking guide
+
+## 13. Links
+
+- Repository: https://github.com/AuremHQ/business-phone
+- Aurem: https://auremcto.com
+- Qwen2.5-0.5B-Instruct: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct
+- SmolLM2 family: https://huggingface.co/HuggingFaceTB/SmolLM2-360M
